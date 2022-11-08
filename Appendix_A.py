@@ -3,7 +3,7 @@ Author: Sydney Ackermann
 Code for fragmentation modes on a lattice 
 The purpose of this code is to simulate competition between fragmentation modes 
 and to see which mode dominates the lattice at the end of the simulation
-given the trade-off between offspring size and vertical transmission of cancer
+given the trade-off between propagule size and the potential for vertical transmission of cancer
 ...
 
 Description of the simulation: This simulation contains: cancer; 
@@ -40,11 +40,11 @@ for i in range(n - 1):
     births[i] = (i + 1) * 0.3  # + g1[i]
 
 # birth probabilities for cells
-prob1 = 1 - exp(-births[0] * dt)  # ranges from 0 -> 1 # prob of cell division of a group of 1
-prob2 = 1 - exp(-births[1] * dt)  # ranges from 0 -> 1 # prob of cell division of a group of 2
-prob3 = 1 - exp(-births[2] * dt)  # ranges from 0 -> 1 # prob of cell division of a group of 3
-prob4 = 1 - exp(-births[3] * dt)  # ranges from 0 -> 1 # prob of cell division of a group of 4
-prob5 = 1 - exp(-births[4] * dt)  # ranges from 0 -> 1 # prob of cell division of a group of 4
+prob1 = 1 - exp(-births[0] * dt)  # ranges from 0 -> 1 # prob of cell division in a group of size 1
+prob2 = 1 - exp(-births[1] * dt)  # ranges from 0 -> 1 # prob of cell division in a group of size 2
+prob3 = 1 - exp(-births[2] * dt)  # ranges from 0 -> 1 # prob of cell division in a group of size 3
+prob4 = 1 - exp(-births[3] * dt)  # ranges from 0 -> 1 # prob of cell division in a group of size 4
+prob5 = 1 - exp(-births[4] * dt)  # ranges from 0 -> 1 # prob of cell division in a group of size 5
 
 # death rates depending on group size
 alpha_d = 1
@@ -78,9 +78,11 @@ probc4 = 1 - exp(-bc4 * dt)
 probc5 = 1 - exp(-bc5 * dt)
 
 # probability of mutating
-probm = 0.1
+probm = 0.1 # set this equal to 0 for no cancer in the simulation
 
 phi = 1
+
+global = 1 # set this equal to 1 for global dispersal, otherwise the simulation will use local dispersal
 
 # -----------------------------------------------------------------------------|
 # define a function for flipping a coin
@@ -266,10 +268,39 @@ def place_offspring(num_of_cancer_cells, offspring, i, j, inheritance_distrib, o
     to stay there.
     '''
 
-    ival = randrange(0, L)  # 0,1,2, ...,L-1
-    jval = randrange(0, L)  # 0,1,2, ...,L-1 # never roll a zero or an L so can't fall off the grid
+    if global == 1: # global dispersal
+        ival = randrange(0, L)  # 0,1,2, ...,L-1
+        jval = randrange(0, L)  # 0,1,2, ...,L-1 # never roll a zero or an L so can't fall off the grid
 
-    winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+        winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+    else: # local dispersal
+        num = randrange(1, 6)  # will return either 1,2,3,4,5, ..., n-1
+
+        if num == 1 and i < L - 1:  # place to the right of parent
+            ival = i + 1
+            jval = j
+            winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+        elif num == 2 and i > 0:  # place to the left of parent
+            ival = i - 1
+            jval = j
+            winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+        elif num == 3 and j < L - 1:  # place above parent
+            ival = i
+            jval = j + 1
+            winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+        elif num == 4 and j > 0:  # place below parent
+            ival = i
+            jval = j - 1
+            winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+        elif num == 5:  # place on the parent spot
+            ival = i
+            jval = j
+            winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
     
 # -----------------------------------------------------------------------------|
 def winner(num_of_cancer_cells, offspring, a, b, inheritance_distrib, offs):
@@ -329,10 +360,9 @@ def fragment(off, spot_to_num_of_cancer):
         max_size[i][j] = 0
         
 # -----------------------------------------------------------------------------|
-def birth(group_size, numcancer):  # make sure this works and the number of cancer cells is compatible
+def birth(group_size, numcancer): 
     '''
     This function takes in the group size and the number of cancer cells
-    
     and calculates the number of cooperators cells; 
     chooses the number of cancer cells that divides and updates the grid;
     chooses the number of cooperator cells that divides and updates the grid;
@@ -404,7 +434,7 @@ def birth(group_size, numcancer):  # make sure this works and the number of canc
     # update cancer dictionary
     spot_to_num_of_cancer[(i, j)] = new_num_of_cancer
 
-    # but make sure it doesn't exceed l
+    # but make sure it doesn't exceed max group size
     if max_size[i][j] == 4:
         if new_num_of_cancer > 4:
             spot_to_num_of_cancer[(i, j)] = 4
@@ -454,7 +484,7 @@ def death(proportion_of_cancer):
     else:
         random_number = random.random_sample()  # pick a random number between 0 and 1
 
-        death_rate = proportion_of_cancer**phi  # nonlinear cancer cost
+        death_rate = proportion_of_cancer**phi  # nonlinear cancer cost for phi != 0
         death_probability = 1 - exp(-death_rate * dt)  # convert to discrete time
 
         if random_number < death_probability:  # if the proportion of cancer is greater than that random number then group dies
@@ -485,7 +515,7 @@ for i in range(L):
     for j in range(L):
         spot_to_num_of_cancer[(i, j)] = 0
 
-# lists to keep track of abuncance of each mode for plotting later
+# lists to keep track of abuncance of each mode for plotting 
 
 mode1 = []
 mode2 = []
