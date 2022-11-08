@@ -7,7 +7,7 @@ given the trade-off between propagule size and the potential for vertical transm
 ...
 
 Description of the simulation: This simulation contains: cancer; 
-birth and death rates that are size-independant
+birth and death rates that are size-independant; group sizes of up to 6 cells
 '''
 
 # import statements
@@ -141,11 +141,11 @@ show()
 
 # -----------------------------------------------------------------------------|
 # create a matrix that records the max group size of each individual
-max_size = zeros((L, L), int)  # max group size can be 2,3,4, or 5
+max_size = zeros((L, L), int)  # max group size can be 2,3,4,5 or 6
 
 # -----------------------------------------------------------------------------|
 # fragmentation genotype for points on the lattice that are inhabited by cells
-Mode = zeros((L, L), int)  # there are 4 fragmentation modes for l=4 + 2 for l=3
+Mode = zeros((L, L), int) 
 
 for i in range(L):
     for j in range(L):
