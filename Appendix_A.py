@@ -485,7 +485,7 @@ def death(proportion_of_cancer):
         random_number = random.random_sample()  # pick a random number between 0 and 1
 
         death_rate = proportion_of_cancer**phi  # nonlinear cancer cost for phi != 0
-        death_probability = 1 - exp(-death_rate * dt)  # convert to discrete time
+        death_probability = 1 - exp(-death_rate * dt)  # convert to continuous-time approximation
 
         if random_number < death_probability:  # if the proportion of cancer is greater than that random number then group dies
             Grid[i][j], Mode[i][j], spot_to_num_of_cancer[(i, j)], max_size[i][j] = 0, 0, 0, 0       
