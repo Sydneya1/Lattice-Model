@@ -22,36 +22,26 @@ from math import exp
 # -----------------------------------------------------------------------------|
 # PARAMETERS
 # -----------------------------------------------------------------------------|
+
+# -----------------------------------------------------------------------------|
+# PARAMETERS
+# -----------------------------------------------------------------------------|
 Num_of_gen = 1000  # number of iterations in the simulation
 L = 25  # dimension of grid
 N0 = 500  # initial population size
-n = 6  # maximum group size // group size at fragmentation
+N = 6  # maximum group size // group size at fragmentation
 dt = 1  # more accurate as this approaches 0
+B = 0.3
 
 # a matrix that keeps tracks of the locations of groups that have reached max size (l) and are about to fragment
 Locations_of_parents = zeros((L, L), int)
 
-alpha = 1
-g1 = zeros(n - 1, float)
-births = zeros(n - 1, float)
-for i in range(n - 1):
-    k = i + 1
-    g1[i] = ((k - 1) / (n - 2))**alpha
-    births[i] = (i + 1) * 0.3  # + g1[i]
-
-# birth probabilities for cells
-prob1 = 1 - exp(-births[0] * dt)  # ranges from 0 -> 1 # prob of cell division in a group of size 1
-prob2 = 1 - exp(-births[1] * dt)  # ranges from 0 -> 1 # prob of cell division in a group of size 2
-prob3 = 1 - exp(-births[2] * dt)  # ranges from 0 -> 1 # prob of cell division in a group of size 3
-prob4 = 1 - exp(-births[3] * dt)  # ranges from 0 -> 1 # prob of cell division in a group of size 4
-prob5 = 1 - exp(-births[4] * dt)  # ranges from 0 -> 1 # prob of cell division in a group of size 5
-
 # death rates depending on group size
 alpha_d = 1
-g2 = zeros(n, float)
-deaths = zeros(n, float)
+g2 = zeros(N, float)
+deaths = zeros(N, float)
 
-for i in range(n):
+for i in range(N):
     deaths[i] = 0.03
 
 # probability of death depending on group size
@@ -62,25 +52,16 @@ dps4 = 1 - exp(-deaths[3] * dt)
 dps5 = 1 - exp(-deaths[4] * dt)
 dps6 = 1 - exp(-deaths[5] * dt)
 
-# birth rates for cancer cells
-r = 2
-bc1 = r * births[0]
-bc2 = r * births[1]
-bc3 = r * births[2]
-bc4 = r * births[3]
-bc5 = r * births[4]
-
-# birth probabilities for cancer cells
-probc1 = 1 - exp(-bc1 * dt)
-probc2 = 1 - exp(-bc2 * dt)
-probc3 = 1 - exp(-bc3 * dt)
-probc4 = 1 - exp(-bc4 * dt)
-probc5 = 1 - exp(-bc5 * dt)
-
 # probability of mutating
-probm = 0.1 # set this equal to 0 for no cancer in the simulation
+probm = 0.1  # 0.1
 
 phi = 1
+
+# size dependence A=1, size independence A=0
+A = 0
+
+# replicative advantage of cancer cells
+R = 2
 
 global = 1 # set this equal to 1 for global dispersal, otherwise the simulation will use local dispersal
 
@@ -360,9 +341,10 @@ def fragment(off, spot_to_num_of_cancer):
         max_size[i][j] = 0
         
 # -----------------------------------------------------------------------------|
-def birth(group_size, numcancer): 
+def birth(group_size, numcancer, i, j):  # make sure this works and the number of cancer cells is compatible
     '''
     This function takes in the group size and the number of cancer cells
+    
     and calculates the number of cooperators cells; 
     chooses the number of cancer cells that divides and updates the grid;
     chooses the number of cooperator cells that divides and updates the grid;
@@ -373,39 +355,55 @@ def birth(group_size, numcancer):
     and finally makes sure that the group size (and number of cancer cells) doesn't exceed l
     '''
 
+    g1 = zeros(N, float)
+    for k in range(1, N):  # works
+        g1[k] = ((k - 1) / (N - 2))
+
     # calc number of cooperator cells
     numcoop = group_size - numcancer
-    if numcancer != 0:
-        
-        # cancer (SIZE-DEPENDENT) cell division
-        probsc = [probc1, probc2, probc3, probc4, probc5]
-        y = random.binomial(1, probsc[group_size - 1], size=None)
-        Grid[i][j] += y
 
-        # make sure the number of cells doesn't exceed the max group size
-        if max_size[i][j] == 4:
-            if Grid[i][j] > 4:
-                Grid[i][j] = 4
-        elif max_size[i][j] == 3:
-            if Grid[i][j] > 3:
-                Grid[i][j] = 3
-        elif max_size[i][j] == 2:
-            if Grid[i][j] > 2:
-                Grid[i][j] = 2
-        elif max_size[i][j] == 5:
-            if Grid[i][j] > 5:
-                Grid[i][j] = 5
-        elif max_size[i][j] == 6:
-            if Grid[i][j] > 6:
-                Grid[i][j] = 6
-    else:
-        y = 0
-  
-    # cooperator (SIZE-DEPENDENT) cell division
-    probs = [prob1, prob2, prob3, prob4, prob5]
-    x = random.binomial(1, probs[group_size - 1], size=None)
-    Grid[i][j] += x
+    # cancer  cell division
+    probb = R * ((B) + (A * g1[numcoop - 1]))
+    probc = 1 - exp(-numcancer * probb)
+    y = random.binomial(1, probc, size=None)
+    Grid[i][j] = Grid[i][j] + y
+
+    group_size = group_size + y
+
+    # make sure the number of cells doesn't exceed the max group size
+    if max_size[i][j] == 4:
+        if Grid[i][j] > 4:
+            Grid[i][j] = 4
+            group_size = 4
+    elif max_size[i][j] == 3:
+        if Grid[i][j] > 3:
+            Grid[i][j] = 3
+            group_size = 3
+    elif max_size[i][j] == 2:
+        if Grid[i][j] > 2:
+            Grid[i][j] = 2
+            group_size = 2
+    elif max_size[i][j] == 5:
+        if Grid[i][j] > 5:
+            Grid[i][j] = 5
+            group_size = 5
+    elif max_size[i][j] == 6:
+        if Grid[i][j] > 6:
+            Grid[i][j] = 6
+            group_size = 6
     
+
+
+    group_size = Grid[i][j]
+    numcancer = numcancer + y
+    numcoop = group_size - numcancer
+
+  # cooperator (SIZE-DEPENDENT) cell division
+    probb = ((B) + (A * g1[numcoop - 1]))
+    probc = 1 - exp(-numcoop * probb)
+    x = random.binomial(1, probc, size=None)
+    Grid[i][j] += x
+
     if max_size[i][j] == 4:
         if Grid[i][j] > 4:
             Grid[i][j] = 4
@@ -428,45 +426,26 @@ def birth(group_size, numcancer):
     # new number of cooperator cells
     numcoop = numcoop - num_of_mutations + x
 
-    # new number of cancer cells
-    new_num_of_cancer = numcancer + num_of_mutations + y
-
     # update cancer dictionary
-    spot_to_num_of_cancer[(i, j)] = new_num_of_cancer
+    spot_to_num_of_cancer[(i, j)] = numcancer + num_of_mutations
 
-    # but make sure it doesn't exceed max group size
+    # but make sure it doesn't exceed l
     if max_size[i][j] == 4:
-        if new_num_of_cancer > 4:
+        if (numcancer + num_of_mutations) > 4:
             spot_to_num_of_cancer[(i, j)] = 4
     elif max_size[i][j] == 3:
-        if new_num_of_cancer > 3:
+        if (numcancer + num_of_mutations) > 3:
             spot_to_num_of_cancer[(i, j)] = 3
     elif max_size[i][j] == 2:
-        if new_num_of_cancer > 2:
+        if (numcancer + num_of_mutations) > 2:
             spot_to_num_of_cancer[(i, j)] = 2
     elif max_size[i][j] == 5:
-        if new_num_of_cancer > 5:
+        if (numcancer + num_of_mutations) > 5:
             spot_to_num_of_cancer[(i, j)] = 5
     elif max_size[i][j] == 6:
-        if new_num_of_cancer > 6:
+        if (numcancer + num_of_mutations) > 6:
             spot_to_num_of_cancer[(i, j)] = 6
 
-    # make sure the total group size doesn't exceed max group size
-    if max_size[i][j] == 4:
-        if Grid[i][j] > 4:
-            Grid[i][j] = 4
-    elif max_size[i][j] == 3:
-        if Grid[i][j] > 3:
-            Grid[i][j] = 3
-    elif max_size[i][j] == 2:
-        if Grid[i][j] > 2:
-            Grid[i][j] = 2
-    elif max_size[i][j] == 5:
-        if Grid[i][j] > 5:
-            Grid[i][j] = 5
-    elif max_size[i][j] == 6:
-        if Grid[i][j] > 6:
-            Grid[i][j] = 6
 
 # -----------------------------------------------------------------------------|
 def death(proportion_of_cancer):
