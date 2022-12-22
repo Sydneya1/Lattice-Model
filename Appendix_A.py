@@ -548,7 +548,7 @@ for p in range(Num_of_gen):
                 numcancer = spot_to_num_of_cancer[(i, j)]
 
                 # call function
-                birth(group_size, numcancer)
+                birth(group_size, numcancer, i, j)
 
                 # death based on group size
                 new_size = Grid[i][j]
