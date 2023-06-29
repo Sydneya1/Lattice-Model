@@ -19,24 +19,21 @@ import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 from math import exp
 
-# -----------------------------------------------------------------------------|
-# PARAMETERS
-# -----------------------------------------------------------------------------|
 
 # -----------------------------------------------------------------------------|
 # PARAMETERS
 # -----------------------------------------------------------------------------|
-Num_of_gen = 1000  # number of iterations in the simulation
-L = 25  # dimension of grid
-N0 = 500  # initial population size
+probm = 0.2 # probability of mutation
+Num_of_gen = 5000  # 5000  # number of iterations in the simulation
+L = 50  # dimension of grid
+N0 = 2000  # initial population size
 N = 6  # maximum group size // group size at fragmentation
+Locations_of_parents = zeros((L, L), int)  # a matrix that keeps tracks of the locations of groups that have reached max size (l) and are about to fragment
 dt = 1  # more accurate as this approaches 0
 B = 0.3
 
-# a matrix that keeps tracks of the locations of groups that have reached max size (l) and are about to fragment
-Locations_of_parents = zeros((L, L), int)
-
 # death rates depending on group size
+
 alpha_d = 1
 g2 = zeros(N, float)
 deaths = zeros(N, float)
@@ -52,18 +49,10 @@ dps4 = 1 - exp(-deaths[3] * dt)
 dps5 = 1 - exp(-deaths[4] * dt)
 dps6 = 1 - exp(-deaths[5] * dt)
 
-# probability of mutating
-probm = 0.1  # 0.1
-
-phi = 1
-
-# size dependence A=1, size independence A=0
-A = 0
-
-# replicative advantage of cancer cells
 R = 2
-
-global = 1 # set this equal to 1 for global dispersal, otherwise the simulation will use local dispersal
+phi = 1
+A = 1
+globall = 0
 
 # -----------------------------------------------------------------------------|
 # define a function for flipping a coin
@@ -107,32 +96,19 @@ while len(grid_vals) < N0 + 1:
         Grid[random_x - 1][random_y - 1] = 1
         grid_vals.append(new)
 
-# plot
-fig0 = figure(0)
-for i in range(len(Grid)):
-    for j in range(len(Grid)):
-        if Grid[i][j] == 1:
-            plot(i, j, marker='o', color='gray', ms=6)
-ax2 = fig0.add_subplot(1, 1, 1)
-ax2.set_yticks(linspace(0, L - 1, L))
-ax2.set_xticks(linspace(0, L - 1, L))
-ax2.grid(True)
-title('grid')
-show()
-
 # -----------------------------------------------------------------------------|
 # create a matrix that records the max group size of each individual
-max_size = zeros((L, L), int)  # max group size can be 2,3,4,5 or 6
+max_size = zeros((L, L), int)  # max group size can be 2,3,4, or 5
 
 # -----------------------------------------------------------------------------|
 # fragmentation genotype for points on the lattice that are inhabited by cells
-Mode = zeros((L, L), int) 
+Mode = zeros((L, L), int)  # there are 4 fragmentation modes for l=4 + 2 for l=3
 
 for i in range(L):
     for j in range(L):
 
         if Grid[i][j] == 1:  # if there is an individual at that spot on the lattice
-            num = roll_dice(24)
+            num = roll_dice(24)  # 7 lifecycles
             Mode[i][j] = num
             if num == 1:
                 max_size[i][j] = 2
@@ -148,52 +124,11 @@ for i in range(L):
 made_colors = ['red', 'orange', 'blue', 'brown', 'pink', 'green', 'purple', 'peru', 'cyan', 'lime', 'teal', 'palegreen', 'magenta', 'rosybrown', 'gold', 'tan', 'navy', 'olive', 'coral', 'darkseagreen', 'bisque', 'lavender', 'darkviolet']
 marker_sizes = [0, 6, 8, 10, 12, 14]
 
-# plot
-fig1 = figure(1)
-ax2 = fig1.add_subplot(1, 1, 1)
-
-for i in range(len(Grid)):
-    for j in range(len(Grid)):
-
-        ax2.plot(i, j, marker='o', color=made_colors[Mode[i][j] - 1], ms=marker_sizes[Grid[i][j]])
-
-ax2.set_yticks(linspace(0, L - 1, L))
-ax2.set_xticks(linspace(0, L - 1, L))
-ax2.grid(True)
-a = mlines.Line2D([], [], color='red', marker='o', markersize=6, label='1+1')
-b = mlines.Line2D([], [], color='orange', marker='o', markersize=6, label='1+1+1')
-c = mlines.Line2D([], [], color='blue', marker='o', markersize=6, label='2+1')
-d = mlines.Line2D([], [], color='brown', marker='o', markersize=6, label='1+1+1+1')
-e = mlines.Line2D([], [], color='pink', marker='o', markersize=6, label='2+1+1')
-f = mlines.Line2D([], [], color='green', marker='o', markersize=6, label='2+2')
-g = mlines.Line2D([], [], color='purple', marker='o', markersize=6, label='3+1')
-
-h = mlines.Line2D([], [], color='peru', marker='o', markersize=6, label='1+1+1+1+1')
-i = mlines.Line2D([], [], color='cyan', marker='o', markersize=6, label='2+1+1+1')
-j = mlines.Line2D([], [], color='lime', marker='o', markersize=6, label='2+2+1')
-k = mlines.Line2D([], [], color='teal', marker='o', markersize=6, label='3+1+1')
-l = mlines.Line2D([], [], color='palegreen', marker='o', markersize=6, label='3+2')
-m = mlines.Line2D([], [], color='magenta', marker='o', markersize=6, label='4+1')
-
-n = mlines.Line2D([], [], color='rosybrown', marker='o', markersize=6, label='1+1+1+1+1+1')
-o = mlines.Line2D([], [], color='gold', marker='o', markersize=6, label='2+1+1+1+1')
-pp = mlines.Line2D([], [], color='tan', marker='o', markersize=6, label='2+2+1+1')
-q = mlines.Line2D([], [], color='navy', marker='o', markersize=6, label='2+2+2')
-r = mlines.Line2D([], [], color='olive', marker='o', markersize=6, label='3+1+1+1')
-s = mlines.Line2D([], [], color='coral', marker='o', markersize=6, label='3+2+1')
-t = mlines.Line2D([], [], color='darkseagreen', marker='o', markersize=6, label='3+3')
-u = mlines.Line2D([], [], color='bisque', marker='o', markersize=6, label='4+1+1')
-v = mlines.Line2D([], [], color='lavender', marker='o', markersize=6, label='4+2')
-w = mlines.Line2D([], [], color='darkviolet', marker='o', markersize=6, label='5+1')
-
-legend(handles=[a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, pp, q, r, s, t, u, v, w], bbox_to_anchor=(1, 1), loc=2, borderaxespad=0.2)
-title('fragmentation mode')
-show()
 
 # -----------------------------------------------------------------------------|
 # FUNCTIONS
 # -----------------------------------------------------------------------------|
-def vt(num_of_cancer_cells, off):
+def vt(num_of_cancer_cells, off):  # there's actually nothing wrong with function, it's just that the number of cancer cells is 4 when it shouldn't be (in a group of size 3)
     '''
     This function takes in the number of cancer cells in the parent 
     (num_of_cancer_cells) and a list of offspring sizes (off)
@@ -217,6 +152,7 @@ def vt(num_of_cancer_cells, off):
             if off[k] < spread[k]:
                 total_cells = 0
 
+
         while total_cells != num_of_cancer_cells:  # untill we reach the number of cancer cells in parent
 
             # find three numbers that add to three and don't exceed offspring size
@@ -234,7 +170,8 @@ def vt(num_of_cancer_cells, off):
             for k in range(len(off)):
                 if off[k] < spread[k]:
                     total_cells = 0
-                    
+
+
     return spread
 
 # -----------------------------------------------------------------------------|
@@ -249,7 +186,7 @@ def place_offspring(num_of_cancer_cells, offspring, i, j, inheritance_distrib, o
     to stay there.
     '''
 
-    if global == 1: # global dispersal
+    if globall == 1:  # global dispersal
         ival = randrange(0, L)  # 0,1,2, ...,L-1
         jval = randrange(0, L)  # 0,1,2, ...,L-1 # never roll a zero or an L so can't fall off the grid
 
@@ -355,26 +292,26 @@ def birth(group_size, numcancer, i, j):  # make sure this works and the number o
     and finally makes sure that the group size (and number of cancer cells) doesn't exceed l
     '''
 
-    g1 = zeros(N, float)
-    for k in range(1, N):  # works
-        g1[k] = ((k - 1) / (N - 2))
+    g1 = zeros(N + 1, float)
+    for k in range(1, N + 1):  # works
+        g1[k] = ((k - 1) / (N - 1))
 
     # calc number of cooperator cells
     numcoop = group_size - numcancer
 
     # cancer  cell division
-    probb = R * ((B) + (A * g1[numcoop - 1]))
-    probc = 1 - exp(-numcancer * probb)
-    y = random.binomial(1, probc, size=None)
-    Grid[i][j] = Grid[i][j] + y
+    probb = R * ((B) + (A * g1[numcoop]))
+    probc= 1 - exp(-numcancer * probb)
+    y= random.binomial(1, probc, size=None)
+    Grid[i][j]= Grid[i][j] + y
 
-    group_size = group_size + y
+    group_size= group_size + y
 
     # make sure the number of cells doesn't exceed the max group size
     if max_size[i][j] == 4:
         if Grid[i][j] > 4:
-            Grid[i][j] = 4
-            group_size = 4
+            Grid[i][j]= 4
+            group_size= 4
     elif max_size[i][j] == 3:
         if Grid[i][j] > 3:
             Grid[i][j] = 3
@@ -399,7 +336,7 @@ def birth(group_size, numcancer, i, j):  # make sure this works and the number o
     numcoop = group_size - numcancer
 
   # cooperator (SIZE-DEPENDENT) cell division
-    probb = ((B) + (A * g1[numcoop - 1]))
+    probb = ((B) + (A * g1[numcoop]))
     probc = 1 - exp(-numcoop * probb)
     x = random.binomial(1, probc, size=None)
     Grid[i][j] += x
@@ -463,8 +400,8 @@ def death(proportion_of_cancer):
     else:
         random_number = random.random_sample()  # pick a random number between 0 and 1
 
-        death_rate = proportion_of_cancer**phi  # nonlinear cancer cost for phi != 0
-        death_probability = 1 - exp(-death_rate * dt)  # convert to continuous-time approximation
+        death_rate = proportion_of_cancer**phi  # nonlinear cancer cost
+        death_probability = 1 - exp(-death_rate * dt)  # convert to discrete time
 
         if random_number < death_probability:  # if the proportion of cancer is greater than that random number then group dies
             Grid[i][j], Mode[i][j], spot_to_num_of_cancer[(i, j)], max_size[i][j] = 0, 0, 0, 0       
@@ -494,7 +431,7 @@ for i in range(L):
     for j in range(L):
         spot_to_num_of_cancer[(i, j)] = 0
 
-# lists to keep track of abuncance of each mode for plotting 
+# lists to keep track of abuncance of each mode for plotting later
 
 mode1 = []
 mode2 = []
@@ -763,6 +700,7 @@ for p in range(Num_of_gen):
     size4.append(s4)
     size5.append(s5)
     size6.append(s6)    
+    
     
 # -----------------------------------------------------------------------------|
 
