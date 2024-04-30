@@ -1,0 +1,685 @@
+# figure3_cluster-random.py
+
+'''
+This code will create graphs for four different simulations
+    - L<=4 no cancer (clean_version_l=2,3,4.py) - sim1
+    - L<=4 cancer (cancer_l=2,3,4.py) - sim2
+    - L<=6 no cancer (clean version + = l=5, l=6.py) - sim3 - to do 
+    - L<=6 cancer (cancer l=5,6.py ) - sim4 - to do 
+    
+Each will have 100 replicates and 100 combinations of b2 and b3
+Each simulation will have two graphs - one showing the winner and the other showing the runner up unless there is no coexistance
+'''
+# import statements
+from random import random, seed, randrange
+from numpy import arange, zeros, ones, random, linspace, exp
+import numpy as np
+from matplotlib.pyplot import imshow, colorbar
+from pylab import plot, show, legend, subplot, xlabel, ylabel, tight_layout, figure, xlim, ylim, title, grid, pause, draw, legend
+import matplotlib.lines as mlines
+import matplotlib.pyplot as plt
+from math import exp
+import multiprocessing as mp
+from time import time
+import pickle
+
+# first up is: size dependent competition and global dispersal
+
+
+
+
+def sim1(b2, b3):
+    # -----------------------------------------------------------------------------|
+    # -----------------------------------------------------------------------------|
+    # PARAMETERS
+    # -----------------------------------------------------------------------------|
+    
+    b1 = 0.1
+    
+    '''
+    b11 = 1 / 10
+    b22 = 2 * b2 / 10
+    b33 = 3 * b3 / 10
+    # birth probabilities for cells
+    prob1 = 1 - exp(-b11 * dt)  # ranges from 0 -> 1 # prob of cell division of a group of 1
+    prob2 = 1 - exp(-b22 * dt)  # ranges from 0 -> 1 # prob of cell division of a group of 2
+    prob3 = 1 - exp(-b33 * dt)  # ranges from 0 -> 1 # prob of cell division of a group of 3
+    '''
+
+
+
+    
+
+
+    
+    Num_of_gen = 1000  # 500  # number of iterations in the simulation
+    L = 50  # dimension of grid
+    N0 = 2000  # 200  # initial population size
+    N = 4  # maximum group size // group size at fragmentation
+    #B = 0.3
+    probm = 0  # 0.1
+    probcancer = probm
+    
+    # a matrix that keeps tracks of the locations of groups that have reached max size (l) and are about to fragment
+    Locations_of_parents = zeros((L, L), int)
+    
+    # death rates depending on group size
+    alpha_d = 1
+    g2 = zeros(N, float)
+    deaths = zeros(N, float)
+    
+    for i in range(N):
+        deaths[i] = 0  # 0.03
+    
+    # probability of death depending on group size
+    dps = []
+    for i in range(len(deaths)):
+        dpss = 1 - exp(-deaths[i])
+        dps.append(dpss)
+
+    # probability of mutating
+    # probm = 0.1  # 0.1
+
+    phi = 1
+    
+    # size dependence A=1, size independence A=0
+    A = 0
+    
+    # replicative advantage of cancer cells
+    R = 2
+    
+    globall = 0
+    
+    
+    
+    # -----------------------------------------------------------------------------|
+    # birth rates
+    
+    g1 = zeros(N - 1, float)
+    #births = zeros(N - 1, float)
+    
+    for k in range(0, N - 1):  # works
+        numcoopp = k + 1
+        g1[k] = ((numcoopp - 1) / (N - 1))  # array([0. (1  cooperator)       , 0.33333333 (2 cooperators), 0.66666667 (3 cooperators)])
+    '''
+    for k in range(0, N - 1):
+        numcoopp = k + 1
+        births[k] = (B) + (A * g1[k])  # array([0.3, 0.6, 0.9]) # NEED TO DIVIDE BY SIZE OF GROUP???????????
+    '''
+    
+    # -----------------------------------------------------------------------------|
+    # define a function for flipping a coin
+    def coin_toss():
+        num = randrange(1, 3)  # will return either 1 or 2
+        return num
+    
+    
+    # -----------------------------------------------------------------------------|
+    # define a function for generalizing size
+    
+    def partition(number):
+        answer = set()
+        answer.add((number, ))
+        for x in range(1, number):
+            for y in partition(number - x):
+                answer.add(tuple(sorted((x, ) + y)))
+        return answer
+    
+    def all_partitions_below(number):
+        answer = set()
+        answer.add((number, ))
+        for x in range(1, number):
+            partition_lower = all_partitions_below(number - x)
+            answer = answer.union(partition_lower)
+            for y in partition_lower:
+                answer.add(tuple(sorted((x, ) + y)))
+        return answer
+    
+    def non_trivial_partitions(n):
+        all_partitions = all_partitions_below(n)
+        for i in range(1, n + 1):
+            all_partitions.remove((i,))
+            pn = sorted(list(all_partitions), key=lambda part: np.sum(part))
+        return pn
+    
+    # -----------------------------------------------------------------------------|
+    # define a function for rolling a n-1 sided die
+    def roll_dice(n):
+        '''
+        This function takes in a number n which dictates how many sides the die has 
+        and returns the outcome of rolling an n-1 sided die
+        values can range from 1,2,3,...,n-1
+        '''
+    
+        num = randrange(1, n)  # will return either 1,2,3,4,5, ..., n-1
+        return num
+    
+    # -----------------------------------------------------------------------------|
+    # DEFINE MATRICES
+    # -----------------------------------------------------------------------------|
+    # create N0 randomly scattered individuals on an L by L grid
+    
+    Grid = zeros((L, L), int)  # 1 represents a single cell, 0 represents no individual
+    grid_vals = []
+    
+    random_x = randrange(1, L + 1)
+    random_y = randrange(1, L + 1)
+    
+    grid_vals.append([random_x, random_y])
+    
+    while len(grid_vals) < N0 + 1:
+    
+        new = [random_x, random_y]
+    
+        if new in grid_vals:
+            random_x = randrange(1, L + 1)
+            random_y = randrange(1, L + 1)
+    
+        else:
+            Grid[random_x - 1][random_y - 1] = 1
+            grid_vals.append(new)
+    
+    
+    # -----------------------------------------------------------------------------|
+    # create a matrix that records the max group size of each individual
+    max_size = zeros((L, L), int)  # max group size can be 2,3,4, or 5
+    
+    # -----------------------------------------------------------------------------|
+    # fragmentation genotype for points on the lattice that are inhabited by cells
+    
+    Mode = zeros((L, L), int)
+    
+    for i in range(L):
+        for j in range(L):
+    
+            if Grid[i][j] == 1:  # if there is an individual at that spot on the lattice
+                num = roll_dice(len(non_trivial_partitions(N)) + 1)
+                Mode[i][j] = num
+    
+                if num == len(partition(2)) - 1:
+                    max_size[i][j] = 2
+    
+                else:
+                    p = len(partition(2))  # 2
+                    o = 0
+                    K = 0
+                    while o <= (N - 3):
+                        size = o + 3
+                        k = p + (len(partition(size))) - 1
+                        if p <= num < k:
+                            max_size[i][j] = size
+                            o = (N - 3) + 1  # exit out of for loop
+    
+                        p = k
+                        o += 1
+    
+    
+    # -----------------------------------------------------------------------------|
+    # FUNCTIONS
+    # -----------------------------------------------------------------------------|
+    def vt(num_of_cancer_cells, off):
+        '''
+        This function takes in the number of cancer cells in the parent 
+        (num_of_cancer_cells) and a list of offspring sizes (off)
+        and returns a list of the amount of cancer each offspring is to inherit
+        '''
+    
+        if num_of_cancer_cells == 0:  # if there are no cancer cells, the inheritance distribution will just be [0,0,0]
+            spread = []
+            for i in range(len(off)):
+                spread.append(0)
+    
+        else:
+            spread = []  # this list is a distribution of the number of cancer cells that is inherited by each offspring
+            for i in range(len(off)):  # for however many offspring there are ex: 3
+                num = randrange(0, num_of_cancer_cells + 1)  # roll the die 3 times, it can have a value between 0 and the number of cells in a group (l)
+                spread.append(num)
+            total_cells = sum(spread)
+            if total_cells != num_of_cancer_cells:  # check that the sum of the values of the 3 rolls adds up to the amount of cancer in the parent
+                total_cells = 0
+            for k in range(len(off)):  # check that the number of cancer cells each offspring inherits does not overshoot it's size
+                if off[k] < spread[k]:
+                    total_cells = 0
+    
+            while total_cells != num_of_cancer_cells:  # untill we reach the number of cancer cells in parent
+    
+                # find three numbers that add to three and don't exceed offspring size
+                spread = []
+                for i in range(len(off)):
+                    upper = num_of_cancer_cells + 1
+                    num = randrange(0, upper)  # 0,1,2,3,4
+                    spread.append(num)
+                total_cells = sum(spread)
+    
+                if total_cells != num_of_cancer_cells:  # check that the sum of the values of the 3 rolls adds up to the amount of cancer in the parent
+                    total_cells = 0
+    
+                # check that the number of cancer cells doesn't exceed the number of offspring cells, otherwise, keep trying
+                for k in range(len(off)):
+                    if off[k] < spread[k]:
+                        total_cells = 0
+    
+        return spread
+    
+    # -----------------------------------------------------------------------------|
+    def place_offspring(num_of_cancer_cells, offspring, i, j, inheritance_distrib, offs):
+        '''
+        This function takes in the number of cancer cells in the parent, the size of
+        the offspring, the coordinates of the spot on the lattice, a list that 
+        determines the number of cancer cells each offspring inherits and the index 
+        of the offspring we are currently considering in the list of offspring.
+        The function then randomly assigns the offspring to a spot on the lattice 
+        given by (ival, jval) and then calls the winner function to see if it gets 
+        to stay there.
+        '''
+    
+        if globall == 1:  # global dispersal
+            ival = randrange(0, L)  # 0,1,2, ...,L-1
+            jval = randrange(0, L)  # 0,1,2, ...,L-1 # never roll a zero or an L so can't fall off the grid
+    
+            winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+        else:  # local dispersal
+            num = randrange(1, 6)  # will return either 1,2,3,4,5, ..., n-1
+    
+            if num == 1 and i < L - 1:  # place to the right of parent
+                ival = i + 1
+                jval = j
+                winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+            elif num == 2 and i > 0:  # place to the left of parent
+                ival = i - 1
+                jval = j
+                winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+            elif num == 3 and j < L - 1:  # place above parent
+                ival = i
+                jval = j + 1
+                winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+            elif num == 4 and j > 0:  # place below parent
+                ival = i
+                jval = j - 1
+                winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+            elif num == 5:  # place on the parent spot
+                ival = i
+                jval = j
+                winner(num_of_cancer_cells, offspring, ival, jval, inheritance_distrib, offs)
+    
+    
+    # -----------------------------------------------------------------------------|
+    def winner(num_of_cancer_cells, offspring, a, b, inheritance_distrib, offs):
+        '''
+        This function takes in the number of cancer cells in the parent, the size of
+        the offspring, the coordinates of the spot on the lattice, a list that 
+        determines the number of cancer cells each offspring inherits and the index 
+        of the offspring we are currently considering in the list of offspring.
+        The function then determines wether or not the offspring wins the spot. If 
+        it does win the spot (depending on it's size) then the matrix that records 
+        size, the matrix that records fragmentation mode, and the dictionary that 
+        records the number of cancer cells at each spot on the lattice all get updated.
+        '''
+        if Grid[a][b] == 0:
+            Grid[a][b] = offspring
+            Mode[a][b] = gene
+            spot_to_num_of_cancer[(a, b)] = inheritance_distrib[offs]
+            max_size[a][b] = fragsize
+            #print(Grid[a][b], ' > ', offspring, 'so offspring dies')
+    
+        else:  # if occupied by another the same size then flip a coin to see who stays
+            numberr = coin_toss()
+    
+            if numberr == 1:
+                #print(Grid[a][b], ' == ', offspring, 'offspring wins')
+                Grid[a][b] = offspring
+                Mode[a][b] = gene
+                spot_to_num_of_cancer[(a, b)] = inheritance_distrib[offs]
+                max_size[a][b] = fragsize
+                
+                
+
+        '''
+        numberr = coin_toss()
+
+        if numberr == 1:
+            # print('offspring wins')
+            Grid[a][b] = offspring
+            Mode[a][b] = gene
+            spot_to_num_of_cancer[(a, b)] = inheritance_distrib[offs]
+            max_size[a][b] = fragsize
+        '''
+        
+    # -----------------------------------------------------------------------------|
+    def fragment(off, spot_to_num_of_cancer):
+        '''
+        This function takes the offspring list; the cancer dictionary
+        and obtains the number of cancer cells; calculates the inheritance distribution;
+        place's the offspring; and finally, updates the Grid, Mode, and the cancer dictionary
+        '''
+    
+        num_of_cancer_cells = spot_to_num_of_cancer[(i, j)]
+    
+        # randomly disrtibute cancer cells among offspring
+        inheritance_distrib = vt(num_of_cancer_cells, off)  # returns for ex: [1,0,0] meaning first offspring inherits one cancer cell and the second and third offspring don't
+    
+        for offs in range(len(off)):
+            offspring = off[offs]
+            place_offspring(num_of_cancer_cells, offspring, i, j, inheritance_distrib, offs)
+    
+        # update parent's spot
+        if Grid[i][j] == 0:
+            Mode[i][j] = 0
+            spot_to_num_of_cancer[(i, j)] = 0
+            max_size[i][j] = 0
+    
+    # -----------------------------------------------------------------------------|
+    def birth(group_size, numcancer, i, j):  # make sure this works and the number of cancer cells is compatible
+        '''
+        This function takes in the group size and the number of cancer cells
+        
+        and calculates the number of cooperators cells; 
+        chooses the number of cancer cells that divides and updates the grid;
+        chooses the number of cooperator cells that divides and updates the grid;
+        chooses the number of cooperator cells that mutate
+        calculates the new number of cooperators by subtracting those that mutated and adding those that divided
+        calculates the new number of cancer cells by adding the new mutations and those that divided
+        then updates the cancer dictionary
+        and finally makes sure that the group size (and number of cancer cells) doesn't exceed l
+        '''
+    
+        
+    
+        # calc number of cooperator cells
+        numcoop = group_size - numcancer
+        
+        
+        
+        
+
+        
+        
+        
+        
+
+        
+
+        births = [b1, b2 / 10, b3 / 10]
+
+        
+        
+        #bpfc = 1 - exp(-numcoop * births)
+        bpfc = 1 - exp(- births[group_size - 1])
+        
+        #probc = 1 - exp(-R * births * numcancer)
+        probc = 1 - exp(-R * births[group_size-1])
+
+        if numcancer != 0:
+            y = random.binomial(numcancer, probc, size=None)  # replace 1 with numcancer !!!!!!!!!!!!!!!!!!!!!!!
+            Grid[i][j] += y
+    
+            # make sure the number of cells doesn't exceed the max group size -> here i need to change
+            '''
+            for val in range(2, N + 1):
+                if max_size[i][j] == val:
+                    record_y = y
+                    # if Grid[i][j] > val:
+                        #Grid[i][j] = val
+            '''
+        else:
+            y = 0
+    
+        #print('y = ', y)
+    
+        x = random.binomial(numcoop, bpfc, size=None)  # replace 1 with numcoop !!!!!!!!!!!!!!!!!!
+        Grid[i][j] += x
+    
+        #print('x = ', x)
+        '''
+        for val in range(2, N + 1):
+            if max_size[i][j] == val:
+                record_x = x
+                # if Grid[i][j] > val:
+                    #Grid[i][j] = val
+        '''
+        ############################################################################
+        if group_size + x + y <= max_size[i][j]:  # if the max size isn't reached
+            true_new_cancer = y
+            true_new_coop = x
+            
+        else:
+    
+            true_new_cancer = 0
+            true_new_coop = 0
+            
+            # pick out of record_x + record_y who actually divdes
+            room_to_divide = max_size[i][j] - group_size
+            total = x + y
+            while room_to_divide > 0 and (total > 0):
+                type_ = randrange(1, total + 1)
+                threshold = y
+                if type_ <= threshold:
+                    # pick a cancer cell
+                    true_new_cancer += 1
+                    y -= 1
+    
+                else:
+                    # pick a normal cell
+                    true_new_coop += 1
+                    x -= 1
+    
+                room_to_divide -= 1
+                total -= 1
+    
+
+        ############################################################################
+
+        # mutate
+        num_of_mutations = random.binomial(true_new_coop, probm, size=None)  # is this ok?
+    
+        cancer_to_coop_mut = random.binomial(true_new_cancer, probcancer, size=None)
+    
+        # new number of cooperator cells
+        new_numcoop = numcoop - num_of_mutations + true_new_coop + cancer_to_coop_mut
+    
+        # new number of cancer cells
+        new_num_of_cancer = numcancer + num_of_mutations + true_new_cancer - cancer_to_coop_mut
+    
+        Grid[i][j] = new_numcoop + new_num_of_cancer
+
+        # update cancer dictionary
+        spot_to_num_of_cancer[(i, j)] = new_num_of_cancer
+
+    
+    # -----------------------------------------------------------------------------|
+    def death(proportion_of_cancer):
+        '''
+        This function takes the proportion of cancer in the group
+        and kills groups depending on this number
+        '''
+    
+        if Grid[i][j] == 0:  # spot not occupied
+            pass
+    
+        elif proportion_of_cancer == 0:  # no cancer
+            pass
+    
+        else:
+            random_number = random.random_sample()  # pick a random number between 0 and 1
+    
+            death_probability = proportion_of_cancer**phi  # nonlinear cancer cost # convert to discrete time
+    
+            if random_number < death_probability:  # if the proportion of cancer is greater than that random number then group dies
+                Grid[i][j], Mode[i][j], spot_to_num_of_cancer[(i, j)], max_size[i][j] = 0, 0, 0, 0
+    
+    # -----------------------------------------------------------------------------|
+    def death_size(new_size):
+        '''
+        This function takes in the size of the group
+        and kills groups depending on their size
+        '''
+    
+        if Grid[i][j] == 0:  # spot not occupied
+            pass
+    
+        else:
+            if random.random_sample() < dps[new_size - 1]:
+                Grid[i][j], Mode[i][j], spot_to_num_of_cancer[(i, j)], max_size[i][j] = 0, 0, 0, 0
+    
+    # -----------------------------------------------------------------------------|
+    # SET UP ITERATION
+    # -----------------------------------------------------------------------------|
+    
+    # create dictionary that records the number of cancer cells at each spot on the lattice (key)
+    spot_to_num_of_cancer = {}
+    for i in range(L):
+        for j in range(L):
+            spot_to_num_of_cancer[(i, j)] = 0
+    
+    # lists to keep track of abuncance of each mode for plotting later
+    pnn = non_trivial_partitions(N)
+    modelists = [[] for _ in range(len(pnn))]
+    
+    sizelists = [[] for _ in range(N)]
+    
+    cancer5 = []
+    
+    # -----------------------------------------------------------------------------|
+    # ITERATE
+    # -----------------------------------------------------------------------------|
+    for p in range(Num_of_gen):
+    
+        # add cells each iteration ------------------------------------------------|
+        for i in range(L):
+            for j in range(L):
+    
+                if Grid[i][j] != 0:  # if there is an individual (/group) at that spot
+    
+                    # calculate group size
+                    group_size = Grid[i][j]
+    
+                    # calculate number of cancer cells
+                    numcancer = spot_to_num_of_cancer[(i, j)]
+    
+                    # call function
+                    birth(group_size, numcancer, i, j)
+    
+                    # death based on group size
+                    new_size = Grid[i][j]
+                    death_size(new_size)
+    
+                if Grid[i][j] != 0:
+                    # death based on proportion of cancer
+                    proportion_of_cancer = spot_to_num_of_cancer[(i, j)] / Grid[i][j]
+                    death(proportion_of_cancer)
+    
+                    # kill adults
+                    # kill adults
+                    for val in range(1, N + 1):
+                        if max_size[i][j] == val:
+                            if Grid[i][j] == val:
+                                Locations_of_parents[i][j] = 1
+                                Grid[i][j] = 0
+    
+        # iterate through the grid and make groups fragment -----------------------|
+        for i in range(L):
+            for j in range(L):
+    
+                # if there is a parent at that spot
+                if Locations_of_parents[i][j] == 1:
+    
+                        # obtain genotype
+                        gene = Mode[i][j]
+    
+                        # obtain size at fragmentation
+                        fragsize = max_size[i][j]
+    
+                        # fragment
+                        offs = [[1, 1], [1, 1, 1], [2, 1], [1, 1, 1, 1], [2, 1, 1], [2, 2], [3, 1]]
+                        #offs = non_trivial_partitions(maximum_adult_size)
+                        fragment(offs[gene - 1], spot_to_num_of_cancer)
+                        Locations_of_parents[i][j] = 0
+    
+        # at each timestep, update the abundances ---------------------------------|
+        countern = [0] * len(pnn)
+    
+        sn = [0] * N
+    
+        countercancer = 0
+    
+        for i in range(L):
+            for j in range(L):
+    
+                # modes
+                if Mode[i][j] == 0:
+                    pass
+    
+                else:
+    
+                    offs = non_trivial_partitions(N)
+                    for val in range(len(offs)):
+                        if Mode[i][j] == val + 1:
+                            countern[val] += 1
+    
+                    # cancer
+                    if spot_to_num_of_cancer[(i, j)] != 0:  # counting the number of individuals with cancer
+                        countercancer += 1
+    
+                    # size
+                    for val in range(N):
+                        if Grid[i][j] == val + 1:
+                            sn[val] += 1
+    
+        for val in range(len(modelists)):
+            modelists[val].append(countern[val])
+    
+        cancer5.append(countercancer)
+    
+        for val in range(N):
+            sizelists[val].append(sn[val])
+    
+    
+    # -----------------------------------------------------------------------------|
+    abundances = []
+    
+    for i in range(len(modelists)):
+        abundances.append(modelists[i][-1])
+    
+    
+    return abundances
+
+################################################################################
+# call function
+
+# [b2,b3]
+# combinations=[[0.5, 0.5], [0.5, 1], [0.5, 1.5], [0.5, 2], [0.5, 2.5], [0.5, 3], [0.5, 3.5], [0.5, 4], [0.5, 4.5], [0.5, 5], [1, 0.5], [1, 1], [1, 1.5], [1, 2], [1, 2.5], [1, 3], [1, 3.5], [1, 4], [1, 4.5], [1, 5], [1.5, 0.5], [1.5, 1], [1.5, 1.5], [1.5, 2], [1.5, 2.5], [1.5, 3], [1.5, 3.5], [1.5, 4], [1.5, 4.5], [1.5, 5], [2, 0.5], [2, 1], [2, 1.5], [2, 2], [2, 2.5], [2, 3], [2, 3.5], [2, 4], [2, 4.5], [2, 5], [2.5, 0.5], [2.5, 1], [2.5, 1.5], [2.5, 2], [2.5, 2.5], [2.5, 3], [2.5, 3.5], [2.5, 4], [2.5, 4.5], [2.5, 5], [3, 0.5], [3, 1], [3, 1.5], [3, 2], [3, 2.5], [3, 3], [3, 3.5], [3, 4], [3, 4.5], [3, 5], [3.5, 0.5], [3.5, 1], [3.5, 1.5], [3.5, 2], [3.5, 2.5], [3.5, 3], [3.5, 3.5], [3.5, 4], [3.5, 4.5], [3.5, 5], [4, 0.5], [4, 1], [4, 1.5], [4, 2], [4, 2.5], [4, 3], [4, 3.5], [4, 4], [4, 4.5], [4, 5], [4.5, 0.5], [4.5, 1], [4.5, 1.5], [4.5, 2], [4.5, 2.5], [4.5, 3], [4.5, 3.5], [4.5, 4], [4.5, 4.5], [4.5, 5], [5, 0.5], [5, 1], [5, 1.5], [5, 2], [5, 2.5], [5, 3], [5, 3.5], [5, 4], [5, 4.5], [5, 5]]
+
+combinations = []
+vals = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
+for i in range(len(vals)):
+    for j in range(len(vals)):
+        combinations.append([vals[i], vals[j]])
+
+replicates = 10  # 100
+
+# copy and paste this section for the other simulations changing data1 to datan and changing abundances
+data1 = []
+for i in range(len(combinations)):
+    result = [0, 0, 0, 0, 0, 0, 0]
+    mean = []
+    b2 = combinations[i][0]
+    b3 = combinations[i][1]
+
+    mp_cpu = mp.cpu_count()
+    # print(mp_cpu)
+    pool = mp.Pool(mp_cpu)  # mp_cpu  number
+    results = pool.starmap(sim1, [(b2, b3) for rep in range(replicates)])  # [[],[]]
+    pool.close()
+    pool.join()
+    mean_list = np.mean(results, 0)
+
+    data1.append(mean_list)
+
+
+pickle.dump(data1, open('fecundityplotlocal,rand.pkl', 'wb'))
+
