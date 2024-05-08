@@ -561,7 +561,7 @@ def sim(probm):
     
                 else:
     
-                    offs = non_trivial_partitions(N)
+                    offs =  [[1, 1], [1, 2], [1, 1, 1], [2, 2], [1, 1, 2], [1, 3], [1, 1, 1, 1]]
                     for val in range(len(offs)):
                         if Mode[i][j] == val + 1:
                             countern[val] += 1
