@@ -1,1 +1,1 @@
-Code for MSc thesis and paper 
+Code for MSc thesis and preprint. Separate files for different simulations/figures. https://github.com/osmond-lab/fragmenting-lattice gives the code for figure S1 in the supplementary material. Preprint available on bioRXiv: https://www.biorxiv.org/content/10.1101/2023.07.17.549265v1. 
